@@ -1,0 +1,118 @@
+from langchain_community.llms.tongyi import Tongyi
+from langchain_community.embeddings import DashScopeEmbeddings
+from datasets import Dataset
+from ragas import evaluate
+from ragas.metrics import context_recall, context_precision, answer_correctness
+
+def evaluate_result(question, answer, ground_truth, context):
+  data_samples = {
+    'question': [question],
+    'answer': [answer],
+    'ground_truth': [ground_truth],
+    'contexts': [context],
+  }
+
+  dataset = Dataset.from_dict(data_samples)
+  score = evaluate(
+    dataset = dataset,
+    metrics = [answer_correctness, context_recall, context_precision],
+    llm = Tongyi(model_name = "qwen-plus"),
+    embeddings = DashScopeEmbeddings(model = "text-embedding-v3")
+  )
+  return score.to_pandas()
+
+question = '张伟是哪个部门的'
+ground_truth = '''公司有三名张伟，分别是：
+- 教研部的张伟：职位是教研专员，邮箱 zhangwei@educompany.com。
+- 课程开发部的张伟：职位是课程开发专员，邮箱 zhangwei01@educompany.com。
+- IT部的张伟：职位是IT专员，邮箱 zhangwei036@educompany.com。
+'''
+response1 = '张伟属于IT部。'
+response2 = '张伟属于课程开发部。'
+
+context1 = ['''
+[1] Node ID: 5015e006-8b00-47cd-ac3b-44b8459578c2
+Text: com|负责公司各项资源政策的实施与执行,分析<力资源数据以优化资源配置,提供决策支持,确保人力资源部门顺畅运作。|  | 行政
+部|黎晗|蔡静|G704|033|行政|行政专员|13800000033|lih@educompany.com|负责采购办公设备与耗材,登记
+与管理公司固定资产协助实施绩效考核,提供行政管理与协调支持,优化行政工作流程。|  | 行政部|秦飞|蔡静|G705|034|行政|行政专员
+|13800000034|qinf@educompany.com|维护公司档案与信息系统,负责公司通知及公告的发布,组织公司活动的前期准备与
+后期评估,确保公司各项工作的顺利进行。|  |
+IT部|张伟|马云|H802|036|IT支撑|IT专员|13800000036|zhangwei...
+Score:  0.316
+
+
+[2] Node ID: 56b838a9-63e3-4c2b-b4f3-ee7eac033045
+Text: com|设计并开发教育课程,撰写课程大纲,组织课程试点,分析市场需求,调整课程内容,以适应学习者的需求和反馈。|  | 课程开发
+部|张伟|王强|B202|008|内容开分发|课程开发专员|13800000008|zhangwei01@educompany.com|精细
+化课程设计,确保课程符合国家教育标准,撰写教具使用说明,协助教研部进行课程的前期调研与评估。|  | 教材编写部|林涛|陈刚|C303|01
+4|内容开发|教材编写专员|13800000014|linta@educompany.com|负责教材配套习题的出题工作,进行习题难易度分析
+与调整,开发辅助学习工具,参与教材整体编排与结构设计。|  |
+教材编写部|冯雪|陈刚|C304|015|内容开发|教材编写专员|13800000...
+Score:  0.263
+''']
+context2 = ['''
+[1] Node ID: 5015e006-8b00-47cd-ac3b-44b8459578c2
+Text: com|负责公司各项资源政策的实施与执行,分析<力资源数据以优化资源配置,提供决策支持,确保人力资源部门顺畅运作。|  | 行政
+部|黎晗|蔡静|G704|033|行政|行政专员|13800000033|lih@educompany.com|负责采购办公设备与耗材,登记
+与管理公司固定资产协助实施绩效考核,提供行政管理与协调支持,优化行政工作流程。|  | 行政部|秦飞|蔡静|G705|034|行政|行政专员
+|13800000034|qinf@educompany.com|维护公司档案与信息系统,负责公司通知及公告的发布,组织公司活动的前期准备与
+后期评估,确保公司各项工作的顺利进行。|  |
+IT部|张伟|马云|H802|036|IT支撑|IT专员|13800000036|zhangwei...
+Score:  0.300
+
+
+[2] Node ID: 56b838a9-63e3-4c2b-b4f3-ee7eac033045
+Text: com|设计并开发教育课程,撰写课程大纲,组织课程试点,分析市场需求,调整课程内容,以适应学习者的需求和反馈。|  | 课程开发
+部|张伟|王强|B202|008|内容开分发|课程开发专员|13800000008|zhangwei01@educompany.com|精细
+化课程设计,确保课程符合国家教育标准,撰写教具使用说明,协助教研部进行课程的前期调研与评估。|  | 教材编写部|林涛|陈刚|C303|01
+4|内容开发|教材编写专员|13800000014|linta@educompany.com|负责教材配套习题的出题工作,进行习题难易度分析
+与调整,开发辅助学习工具,参与教材整体编排与结构设计。|  |
+教材编写部|冯雪|陈刚|C304|015|内容开发|教材编写专员|13800000...
+Score:  0.244
+
+
+[3] Node ID: b49f182c-f43f-4232-80c4-59dde9f23d48
+Text: # 内容公司各部门职责与关键角色联系方式    ## 公司定位    我们的公司致力于推动教育的数字化转型,专注于开发富有创意和
+互动性的在线学习平台与工具。我们结合最新的教育理论与技术创新,旨在提升学习者的参与度和学习效果。通过提供个性化学习体验,我们希望满足不同年龄
+段和背景的学习需求,助力教育公平和终身学习。我们的使命是使知识获取更加便捷、高效,让每个人都能充分发挥潜力。    ## 各部门介绍
+教研部:教育课程研究设计    课程开发部:技术内容需求开发    教材编写部:教材、练习题等内容汇编与修订    评估部:内容质量质检
+市场部:市场活动营销    人力资源部:人力资源管理    IT部:IT技术支撑    绩效管理部:人员绩效考核设计    ##
+各部门关键角...
+Score:  0.234
+
+
+[4] Node ID: 68babe4c-b94d-4afc-baf4-302986ff1a72
+Text: 公司项目管理工具有两种选择：   1. **Jira**：对于软件开发团队来说，Jira
+是一个非常强大的工具，支持敏捷开发方法，如Scrum和Kanban。它提供了丰富的功能，包括问题跟踪、时间跟踪等。   2.
+**Microsoft Project**：对于大型企业或复杂项目，Microsoft Project
+提供了详细的计划制定、资源分配和成本控制等功能。它更适合那些需要严格控制项目时间和成本的场景。   在一般情况下请使用Microsoft
+Project，公司购买了完整的许可证。软件研发一组、三组和四组正在使用Jira，计划于2026年之前逐步切换至Microsoft
+Project。   综合技术岗位的工作内容和责任范围是怎样的？ 具体工作内容和责任范围包括： - **...
+Score:  0.138
+
+
+[5] Node ID: da81e5a9-4627-497f-aa42-8d41b8959f65
+Text: RAG科普文章  在当今的大数据时代，生成式人工智能（Generative AI）取得了显著进展，尤其是大语言模型（LLMs）如
+GPT-
+3、BERT等。然而，这些模型也面临一些关键挑战，包括生成内容的准确性、知识更新滞后以及难以解释的推理过程。为了解决这些问题，RAG（Ret
+rieval-Augmented
+Generation，即检索增强生成）技术应运而生，并迅速成为研究热点。本文将带你深入了解RAG的作用、工作过程、特点以及它解决的问题。
+RAG的作用是什么？  RAG的核心思想是将外部知识库的检索与生成模型结合，以提高生成文本的准确性和相关性。传统的大语言模型主要依赖其内部存
+储的知识进行文本生成，这导致它们在面对超出训练数据范围的问题时容易产生“幻觉”或错误信息。RAG通过在生...
+Score: -0.035
+''']
+
+v1 = evaluate_result(question = question, answer = response1, ground_truth = ground_truth, context = context1)
+v2 = evaluate_result(question = question, answer = response2, ground_truth = ground_truth, context = context2)
+
+print(v1.answer_correctness, v1.context_recall, v1.context_precision)
+print(v2.answer_correctness, v2.context_recall, v2.context_precision)
+
+# 0    0.448011
+# Name: answer_correctness, dtype: float64 0    0.666667
+# Name: context_recall, dtype: float64 0    1.0
+# Name: context_precision, dtype: float64
+# 0    0.38039
+# Name: answer_correctness, dtype: float64 0    0.75
+# Name: context_recall, dtype: float64 0    1.0
+# Name: context_precision, dtype: float64
